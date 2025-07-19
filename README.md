@@ -18,9 +18,10 @@ pip install -r requirements.txt
 python ss2wp.py <squarespace-post-url>
 ```
 
-Running the script creates a new folder named after the post title (spaces are
-replaced with underscores). The folder will contain the generated HTML file and
-an `images` directory with all downloaded images.
+Running the script creates a new folder named after the first 15 characters of
+the post title (spaces are replaced with underscores). The folder will contain
+the generated HTML file (named the same as the folder) and an `images`
+directory with all downloaded images.
 
 ## Status
 

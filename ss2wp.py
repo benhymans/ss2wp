@@ -65,6 +65,8 @@ def sanitize_post_name(title: str) -> str:
     name = title.strip().replace(" ", "_")
     # Remove characters that could be problematic in file or folder names
     name = re.sub(r"[^\w-]", "", name)
+    # Limit to the first 15 characters to avoid overly long paths
+    name = name[:15]
     return name or "post"
 
 
