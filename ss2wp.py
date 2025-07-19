@@ -92,6 +92,7 @@ def strip_paragraph_classes(soup: BeautifulSoup) -> None:
         p_tag.attrs.pop("class", None)
 
 
+
 def build_html(title: str, content: BeautifulSoup) -> str:
     html_parts = [f"<h1>{title}</h1>"]
     for element in content.find_all(["p", "ul", "ol", "pre", "blockquote"]):
@@ -113,6 +114,7 @@ def main(argv: list[str]) -> int:
     images_dir = ensure_images_dir(Path.cwd())
     process_images(content, images_dir)
     strip_paragraph_classes(content)
+
     output_html = build_html(title, content)
 
     if args.output:
