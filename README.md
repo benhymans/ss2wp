@@ -7,13 +7,14 @@ ss2wp is a Python script that helps migrate blog posts from Squarespace to WordP
 - **Extract title and article text** from a given Squarespace blog post URL
 - **Generate clean HTML** that preserves basic formatting and is ready to paste into WordPress
 - **Download post images** into a local directory with unique filenames
+- **Replace images with placeholders** using `<p>[[[ IMAGE ]]]</p>` in the output
 
 ## Usage
 
-The script requires Python 3 and `requests` plus `beautifulsoup4` packages. Install the dependencies and run the script with the target post URL:
+The script requires Python 3. Install the dependencies and run the script with the target post URL:
 
 ```bash
-pip install requests beautifulsoup4
+pip install -r requirements.txt
 python ss2wp.py <squarespace-post-url>
 ```
 

@@ -71,18 +71,31 @@ def download_image(url: str, images_dir: Path) -> str:
 def process_images(soup: BeautifulSoup, images_dir: Path) -> None:
     for img in soup.find_all("img"):
         src = img.get("src")
-        if not src:
-            continue
-        try:
-            filename = download_image(src, images_dir)
-            img["src"] = f"images/{filename}"
-        except Exception as exc:
-            print(f"Failed to download {src}: {exc}", file=sys.stderr)
+        if src:
+            try:
+                download_image(src, images_dir)
+            except Exception as exc:
+                print(f"Failed to download {src}: {exc}", file=sys.stderr)
+
+        placeholder = soup.new_tag("p")
+        placeholder.string = "[[[ IMAGE ]]]"
+
+        parent = img.parent
+        if parent.name == "p" and len(parent.contents) == 1:
+            parent.replace_with(placeholder)
+        else:
+            img.replace_with(placeholder)
+
+
+def strip_paragraph_classes(soup: BeautifulSoup) -> None:
+    for p_tag in soup.find_all("p"):
+        p_tag.attrs.pop("class", None)
+
 
 
 def build_html(title: str, content: BeautifulSoup) -> str:
     html_parts = [f"<h1>{title}</h1>"]
-    for element in content.find_all(["p", "img", "ul", "ol", "pre", "blockquote"]):
+    for element in content.find_all(["p", "ul", "ol", "pre", "blockquote"]):
         html_parts.append(str(element))
     return "\n".join(html_parts)
 
@@ -100,6 +113,8 @@ def main(argv: list[str]) -> int:
     title, content = parse_post(html)
     images_dir = ensure_images_dir(Path.cwd())
     process_images(content, images_dir)
+    strip_paragraph_classes(content)
+
     output_html = build_html(title, content)
 
     if args.output:
