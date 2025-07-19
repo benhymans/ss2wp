@@ -18,11 +18,9 @@ pip install -r requirements.txt
 python ss2wp.py <squarespace-post-url>
 ```
 
-The downloaded images will be saved in an `images` folder in the current directory. The resulting HTML will be printed to standard output for easy copying, or optionally written to a file using `-o`:
-
-```bash
-python ss2wp.py <url> -o output.html
-```
+Running the script creates a new folder named after the post title (spaces are
+replaced with underscores). The folder will contain the generated HTML file and
+an `images` directory with all downloaded images.
 
 ## Status
 
