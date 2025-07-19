@@ -2,7 +2,6 @@ import argparse
 import os
 import re
 import sys
-import uuid
 from pathlib import Path
 
 import requests
@@ -54,21 +53,28 @@ def ensure_images_dir(path: Path) -> Path:
     return images_dir
 
 
-def download_image(url: str, images_dir: Path) -> str:
+def sanitize_title_prefix(title: str) -> str:
+    """Return a safe prefix for image filenames based on the post title."""
+    prefix = title.strip().replace(" ", "_").lower()
+    prefix = re.sub(r"[^a-z0-9_]", "", prefix)[:10]
+    return prefix or "image"
+
+
+def download_image(url: str, images_dir: Path, prefix: str, index: int) -> str:
     """Download an image and return its local filename."""
     resp = requests.get(url, headers=HEADERS, timeout=30)
     resp.raise_for_status()
 
-    # Generate unique filename from uuid and extension
+    # Create filename using title prefix and sequential index
     ext = os.path.splitext(url.split("?")[0])[1] or ".jpg"
-    filename = f"{uuid.uuid4().hex}{ext}"
+    filename = f"{prefix}_{index}{ext}"
     filepath = images_dir / filename
     with open(filepath, "wb") as f:
         f.write(resp.content)
     return filename
 
 
-def process_images(soup: BeautifulSoup, images_dir: Path) -> None:
+def process_images(soup: BeautifulSoup, images_dir: Path, prefix: str) -> None:
     # Determine the root BeautifulSoup object for creating new tags. When
     # ``soup`` is a Tag rather than the ``BeautifulSoup`` object itself,
     # calling ``soup.new_tag`` will fail because Tags expose ``new_tag`` as
@@ -78,13 +84,16 @@ def process_images(soup: BeautifulSoup, images_dir: Path) -> None:
     while hasattr(root, "parent") and root.parent is not None:
         root = root.parent
 
+    index = 1
     for img in soup.find_all("img"):
         src = img.get("src")
         if src:
             try:
-                download_image(src, images_dir)
+                download_image(src, images_dir, prefix, index)
             except Exception as exc:
                 print(f"Failed to download {src}: {exc}", file=sys.stderr)
+
+        index += 1
 
         # ``root`` is guaranteed to be the ``BeautifulSoup`` instance so we can
         # safely create new tags from it.
@@ -123,7 +132,8 @@ def main(argv: list[str]) -> int:
     html = fetch_page(args.url)
     title, content = parse_post(html)
     images_dir = ensure_images_dir(Path.cwd())
-    process_images(content, images_dir)
+    prefix = sanitize_title_prefix(title)
+    process_images(content, images_dir, prefix)
     strip_paragraph_classes(content)
 
     output_html = build_html(title, content)
