@@ -60,6 +60,16 @@ def sanitize_title_prefix(title: str) -> str:
     return prefix or "image"
 
 
+def sanitize_post_name(title: str) -> str:
+    """Return a filesystem-friendly name based on the post title."""
+    name = title.strip().replace(" ", "_")
+    # Remove characters that could be problematic in file or folder names
+    name = re.sub(r"[^\w-]", "", name)
+    # Limit to the first 15 characters to avoid overly long paths
+    name = name[:15]
+    return name or "post"
+
+
 def download_image(url: str, images_dir: Path, prefix: str, index: int) -> str:
     """Download an image and return its local filename."""
     resp = requests.get(url, headers=HEADERS, timeout=30)
@@ -121,9 +131,10 @@ def build_html(title: str, content: BeautifulSoup) -> str:
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Convert Squarespace post to WordPress HTML")
+    parser = argparse.ArgumentParser(
+        description="Convert Squarespace post to WordPress HTML"
+    )
     parser.add_argument("url", help="URL of the Squarespace post")
-    parser.add_argument("-o", "--output", help="Optional output file")
     return parser.parse_args(argv)
 
 
@@ -131,17 +142,19 @@ def main(argv: list[str]) -> int:
     args = parse_args(argv)
     html = fetch_page(args.url)
     title, content = parse_post(html)
-    images_dir = ensure_images_dir(Path.cwd())
+    post_name = sanitize_post_name(title)
+    post_dir = Path.cwd() / post_name
+    post_dir.mkdir(exist_ok=True)
+    images_dir = ensure_images_dir(post_dir)
     prefix = sanitize_title_prefix(title)
     process_images(content, images_dir, prefix)
     strip_paragraph_classes(content)
 
     output_html = build_html(title, content)
 
-    if args.output:
-        Path(args.output).write_text(output_html, encoding="utf-8")
-    else:
-        print(output_html)
+    output_file = post_dir / f"{post_name}.html"
+    output_file.write_text(output_html, encoding="utf-8")
+    print(f"Wrote {output_file}")
     return 0
 
 
