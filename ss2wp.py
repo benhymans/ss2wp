@@ -69,6 +69,15 @@ def download_image(url: str, images_dir: Path) -> str:
 
 
 def process_images(soup: BeautifulSoup, images_dir: Path) -> None:
+    # Determine the root BeautifulSoup object for creating new tags. When
+    # ``soup`` is a Tag rather than the ``BeautifulSoup`` object itself,
+    # calling ``soup.new_tag`` will fail because Tags expose ``new_tag`` as
+    # ``None``. We therefore walk up the parent chain until we reach the
+    # root ``BeautifulSoup`` instance which provides ``new_tag``.
+    root = soup
+    while hasattr(root, "parent") and root.parent is not None:
+        root = root.parent
+
     for img in soup.find_all("img"):
         src = img.get("src")
         if src:
@@ -77,7 +86,9 @@ def process_images(soup: BeautifulSoup, images_dir: Path) -> None:
             except Exception as exc:
                 print(f"Failed to download {src}: {exc}", file=sys.stderr)
 
-        placeholder = soup.new_tag("p")
+        # ``root`` is guaranteed to be the ``BeautifulSoup`` instance so we can
+        # safely create new tags from it.
+        placeholder = root.new_tag("p")
         placeholder.string = "[[[ IMAGE ]]]"
 
         parent = img.parent
