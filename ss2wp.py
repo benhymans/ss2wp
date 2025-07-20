@@ -146,10 +146,12 @@ def process_gallery(gallery_url: str, referer: str, post_dir: Path, prefix: str)
     gallery_dir.mkdir(exist_ok=True)
     gallery_prefix = f"gallery_{prefix}"
 
-    image_list = soup.find("div", class_="image-list")
+    # Only consider images within the currently active gallery project
+    image_list = soup.select_one(
+        "div.project.gallery-project.active-project div.image-list"
+    )
     if image_list:
-        index = 1
-        for img in image_list.find_all("img"):
+        for index, img in enumerate(image_list.find_all("img"), start=1):
             src = img.get("src")
             if src:
                 img_url = urljoin(full_url, src)
@@ -157,7 +159,6 @@ def process_gallery(gallery_url: str, referer: str, post_dir: Path, prefix: str)
                     download_image(img_url, gallery_dir, gallery_prefix, index)
                 except Exception as exc:
                     print(f"Failed to download {src}: {exc}", file=sys.stderr)
-            index += 1
 
     desc = soup.find("div", class_="project-description")
     if desc:
