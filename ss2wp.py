@@ -146,10 +146,9 @@ def process_gallery(gallery_url: str, referer: str, post_dir: Path, prefix: str)
     gallery_dir.mkdir(exist_ok=True)
     gallery_prefix = f"gallery_{prefix}"
 
-    # Only consider images within the currently active gallery project
-    image_list = soup.select_one(
-        "div.project.gallery-project.active-project div.image-list"
-    )
+    # Locate the first "active-project" and grab images from its "image-list" div
+    active = soup.find("div", class_=lambda c: c and "active-project" in c.split())
+    image_list = active.find("div", class_="image-list") if active else None
     if image_list:
         for index, img in enumerate(image_list.find_all("img"), start=1):
             src = img.get("src")
