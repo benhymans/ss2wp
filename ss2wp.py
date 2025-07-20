@@ -3,7 +3,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -79,15 +79,33 @@ def find_gallery_link(soup: BeautifulSoup, base_url: str) -> str | None:
     return None
 
 
-def extract_gallery_images(html: str) -> list[str]:
+def extract_gallery_images(html: str, gallery_url: str) -> list[str]:
     """Return a list of image URLs from the gallery page."""
     soup = BeautifulSoup(html, "html.parser")
-    project = soup.find("div", class_="project gallery-project active-project")
+
+    fragment = urlparse(gallery_url).fragment
+    fragment = fragment.lstrip("/")
+    fragment = fragment.rstrip("/")
+    target = fragment
+
+    project = None
+    if target:
+        for candidate in soup.find_all("div", class_="project gallery-project"):
+            data_url = candidate.get("data-url", "").lstrip("/").rstrip("/")
+            if data_url.endswith(target):
+                project = candidate
+                break
+
+    if project is None:
+        project = soup.find("div", class_="project gallery-project active-project")
+
     if not project:
         return []
+
     image_list = project.find("div", class_="image-list")
     if not image_list:
         return []
+
     images: list[str] = []
     for img in image_list.find_all("img"):
         src = img.get("src")
@@ -181,7 +199,7 @@ def main(argv: list[str]) -> int:
     if gallery_link:
         try:
             gallery_html = fetch_page(gallery_link)
-            gallery_images = extract_gallery_images(gallery_html)
+            gallery_images = extract_gallery_images(gallery_html, gallery_link)
         except Exception as exc:  # pragma: no cover - network errors
             print(f"Failed to retrieve gallery page: {exc}", file=sys.stderr)
 
