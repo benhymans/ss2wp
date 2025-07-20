@@ -3,6 +3,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -68,6 +69,31 @@ def sanitize_post_name(title: str) -> str:
     # Limit to the first 15 characters to avoid overly long paths
     name = name[:15]
     return name or "post"
+
+
+def find_gallery_link(soup: BeautifulSoup, base_url: str) -> str | None:
+    """Return an absolute URL to the gallery page if found."""
+    link = soup.find("a", href=lambda h: h and "/gallery#/" in h)
+    if link and link.get("href"):
+        return urljoin(base_url, link["href"])
+    return None
+
+
+def extract_gallery_images(html: str) -> list[str]:
+    """Return a list of image URLs from the gallery page."""
+    soup = BeautifulSoup(html, "html.parser")
+    project = soup.find("div", class_="project gallery-project active-project")
+    if not project:
+        return []
+    image_list = project.find("div", class_="image-list")
+    if not image_list:
+        return []
+    images: list[str] = []
+    for img in image_list.find_all("img"):
+        src = img.get("src")
+        if src:
+            images.append(src)
+    return images
 
 
 def download_image(url: str, images_dir: Path, prefix: str, index: int) -> str:
@@ -148,6 +174,17 @@ def main(argv: list[str]) -> int:
     args = parse_args(argv)
     html = fetch_page(args.url)
     title, content = parse_post(html)
+
+    soup = BeautifulSoup(html, "html.parser")
+    gallery_link = find_gallery_link(soup, args.url)
+    gallery_images: list[str] = []
+    if gallery_link:
+        try:
+            gallery_html = fetch_page(gallery_link)
+            gallery_images = extract_gallery_images(gallery_html)
+        except Exception as exc:  # pragma: no cover - network errors
+            print(f"Failed to retrieve gallery page: {exc}", file=sys.stderr)
+
     post_name = sanitize_post_name(title)
     post_dir = Path.cwd() / post_name
     post_dir.mkdir(exist_ok=True)
@@ -161,6 +198,10 @@ def main(argv: list[str]) -> int:
     output_file = post_dir / f"{post_name}.html"
     output_file.write_text(output_html, encoding="utf-8")
     print(f"Wrote {output_file}")
+    if gallery_images:
+        gallery_file = post_dir / "gallery-images"
+        gallery_file.write_text("\n".join(gallery_images), encoding="utf-8")
+        print(f"Wrote {gallery_file}")
     return 0
 
 
