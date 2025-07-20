@@ -128,7 +128,7 @@ def build_html(title: str, content: BeautifulSoup) -> str:
     html_parts = [f"<h1>{title}</h1>"]
 
     allowed_tags = ["p", "ul", "ol", "pre", "blockquote"]
-    allowed_tags.extend(f"h{i}" for i in range(2, 7))
+    allowed_tags.extend(f"h{i}" for i in range(1, 7))
 
     for element in content.find_all(allowed_tags):
         html_parts.append(str(element))
