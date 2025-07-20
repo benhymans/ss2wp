@@ -79,8 +79,8 @@ def find_gallery_link(soup: BeautifulSoup, base_url: str) -> str | None:
     return None
 
 
-def extract_gallery_images(html: str, gallery_url: str) -> list[str]:
-    """Return a list of image URLs from the gallery page."""
+def extract_gallery_images(html: str, gallery_url: str) -> tuple[list[str], str]:
+    """Return image URLs and description text from the gallery page."""
     soup = BeautifulSoup(html, "html.parser")
 
     fragment = urlparse(gallery_url).fragment
@@ -100,11 +100,16 @@ def extract_gallery_images(html: str, gallery_url: str) -> list[str]:
         project = soup.find("div", class_="project gallery-project active-project")
 
     if not project:
-        return []
+        return [], ""
 
     image_list = project.find("div", class_="image-list")
     if not image_list:
-        return []
+        return [], ""
+
+    desc_div = project.find("div", class_="project-description")
+    description = ""
+    if desc_div:
+        description = desc_div.get_text(strip=True)
 
     images: list[str] = []
     for img in image_list.find_all("img"):
@@ -114,7 +119,7 @@ def extract_gallery_images(html: str, gallery_url: str) -> list[str]:
         full = urljoin(gallery_url, src)
         clean = full.split("?", 1)[0]
         images.append(clean)
-    return images
+    return images, description
 
 
 def download_image(url: str, images_dir: Path, prefix: str, index: int) -> str:
@@ -169,8 +174,9 @@ def strip_paragraph_classes(soup: BeautifulSoup) -> None:
         p_tag.attrs.pop("class", None)
 
 
-
-def build_html(title: str, content: BeautifulSoup) -> str:
+def build_html(
+    title: str, content: BeautifulSoup, gallery_description: str | None = None
+) -> str:
     """Return minimal HTML for the post body including headings."""
     html_parts = [f"<h1>{title}</h1>"]
 
@@ -179,6 +185,11 @@ def build_html(title: str, content: BeautifulSoup) -> str:
 
     for element in content.find_all(allowed_tags):
         html_parts.append(str(element))
+
+    if gallery_description:
+        html_parts.append("<hr>")
+        html_parts.append("<h2>Gallery</h2>")
+        html_parts.append(f"<p>{gallery_description}</p>")
 
     return "\n".join(html_parts)
 
@@ -199,10 +210,13 @@ def main(argv: list[str]) -> int:
     soup = BeautifulSoup(html, "html.parser")
     gallery_link = find_gallery_link(soup, args.url)
     gallery_images: list[str] = []
+    gallery_description = ""
     if gallery_link:
         try:
             gallery_html = fetch_page(gallery_link)
-            gallery_images = extract_gallery_images(gallery_html, gallery_link)
+            gallery_images, gallery_description = extract_gallery_images(
+                gallery_html, gallery_link
+            )
         except Exception as exc:  # pragma: no cover - network errors
             print(f"Failed to retrieve gallery page: {exc}", file=sys.stderr)
 
@@ -214,7 +228,7 @@ def main(argv: list[str]) -> int:
     process_images(content, images_dir, prefix)
     strip_paragraph_classes(content)
 
-    output_html = build_html(title, content)
+    output_html = build_html(title, content, gallery_description or None)
 
     output_file = post_dir / f"{post_name}.html"
     output_file.write_text(output_html, encoding="utf-8")
