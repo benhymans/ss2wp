@@ -124,9 +124,15 @@ def strip_paragraph_classes(soup: BeautifulSoup) -> None:
 
 
 def build_html(title: str, content: BeautifulSoup) -> str:
+    """Return minimal HTML for the post body including headings."""
     html_parts = [f"<h1>{title}</h1>"]
-    for element in content.find_all(["p", "ul", "ol", "pre", "blockquote"]):
+
+    allowed_tags = ["p", "ul", "ol", "pre", "blockquote"]
+    allowed_tags.extend(f"h{i}" for i in range(1, 7))
+
+    for element in content.find_all(allowed_tags):
         html_parts.append(str(element))
+
     return "\n".join(html_parts)
 
 
