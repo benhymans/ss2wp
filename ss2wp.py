@@ -3,6 +3,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -122,6 +123,48 @@ def strip_paragraph_classes(soup: BeautifulSoup) -> None:
         p_tag.attrs.pop("class", None)
 
 
+def find_gallery_link(soup: BeautifulSoup) -> str | None:
+    """Return the first link href that contains '/gallery#/' if present."""
+    link = soup.find("a", href=re.compile(r"/gallery#/"))
+    if link and link.get("href"):
+        return link["href"]
+    return None
+
+
+def process_gallery(gallery_url: str, referer: str, post_dir: Path, prefix: str) -> None:
+    """Download gallery images and text if available."""
+    full_url = urljoin(referer, gallery_url)
+    try:
+        gallery_html = fetch_page(full_url)
+    except Exception as exc:
+        print(f"Failed to fetch gallery page {full_url}: {exc}", file=sys.stderr)
+        return
+
+    soup = BeautifulSoup(gallery_html, "html.parser")
+
+    gallery_dir = post_dir / "gallery-images"
+    gallery_dir.mkdir(exist_ok=True)
+    gallery_prefix = f"gallery_{prefix}"
+
+    image_list = soup.find("div", class_="image-list")
+    if image_list:
+        index = 1
+        for img in image_list.find_all("img"):
+            src = img.get("src")
+            if src:
+                img_url = urljoin(full_url, src)
+                try:
+                    download_image(img_url, gallery_dir, gallery_prefix, index)
+                except Exception as exc:
+                    print(f"Failed to download {src}: {exc}", file=sys.stderr)
+            index += 1
+
+    desc = soup.find("div", class_="project-description")
+    if desc:
+        text = desc.get_text(strip=True)
+        (post_dir / "gallery-text.txt").write_text(text, encoding="utf-8")
+
+
 
 def build_html(title: str, content: BeautifulSoup) -> str:
     """Return minimal HTML for the post body including headings."""
@@ -148,6 +191,7 @@ def main(argv: list[str]) -> int:
     args = parse_args(argv)
     html = fetch_page(args.url)
     title, content = parse_post(html)
+    soup = BeautifulSoup(html, "html.parser")
     post_name = sanitize_post_name(title)
     post_dir = Path.cwd() / post_name
     post_dir.mkdir(exist_ok=True)
@@ -155,6 +199,12 @@ def main(argv: list[str]) -> int:
     prefix = sanitize_title_prefix(title)
     process_images(content, images_dir, prefix)
     strip_paragraph_classes(content)
+
+    gallery_link = find_gallery_link(soup)
+    if gallery_link:
+        process_gallery(gallery_link, args.url, post_dir, prefix)
+    else:
+        print("gallery not found")
 
     output_html = build_html(title, content)
 
