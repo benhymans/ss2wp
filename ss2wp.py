@@ -109,8 +109,11 @@ def extract_gallery_images(html: str, gallery_url: str) -> list[str]:
     images: list[str] = []
     for img in image_list.find_all("img"):
         src = img.get("src")
-        if src:
-            images.append(src)
+        if not src:
+            continue
+        full = urljoin(gallery_url, src)
+        clean = full.split("?", 1)[0]
+        images.append(clean)
     return images
 
 
@@ -217,9 +220,12 @@ def main(argv: list[str]) -> int:
     output_file.write_text(output_html, encoding="utf-8")
     print(f"Wrote {output_file}")
     if gallery_images:
-        gallery_file = post_dir / "gallery-images"
-        gallery_file.write_text("\n".join(gallery_images), encoding="utf-8")
-        print(f"Wrote {gallery_file}")
+        gallery_prefix = f"gallery_{prefix}"
+        for idx, url in enumerate(gallery_images, start=1):
+            try:
+                download_image(url, images_dir, gallery_prefix, idx)
+            except Exception as exc:  # pragma: no cover - network errors
+                print(f"Failed to download gallery image {url}: {exc}", file=sys.stderr)
     return 0
 
 
