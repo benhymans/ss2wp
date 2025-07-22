@@ -11,7 +11,7 @@ ss2wp is a Python script that helps migrate blog posts from Squarespace to WordP
 - **Omit the first image placeholder** so you can place the lead image manually
 - **Exclude original `<h1>` headings** to prevent duplicate titles in WordPress
 - **Append gallery description** below the post content when available
-- **Remove trailing "Read More" links** from gallery descriptions
+- **Remove trailing "Read More" links** (including "Read More...") from gallery descriptions
 
 ## Usage
 

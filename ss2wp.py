@@ -110,10 +110,13 @@ def extract_gallery_images(html: str, gallery_url: str) -> tuple[list[str], str]
     description = ""
     if desc_div:
         for a in desc_div.find_all("a"):
-            if a.get_text(strip=True).lower() == "read more":
+            text = a.get_text(strip=True)
+            if re.match(r"read\s*more(?:\.{3}|…)?$", text, flags=re.I):
                 a.decompose()
         description = desc_div.get_text(" ", strip=True)
-        description = re.sub(r"\s*read\s*more\s*$", "", description, flags=re.I)
+        description = re.sub(
+            r"\s*read\s*more(?:\.{3}|…)?\s*$", "", description, flags=re.I
+        )
 
     images: list[str] = []
     for img in image_list.find_all("img"):
