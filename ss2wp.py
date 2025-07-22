@@ -185,7 +185,9 @@ def build_html(
     html_parts = [f"<h1>{title}</h1>"]
 
     allowed_tags = ["p", "ul", "ol", "pre", "blockquote"]
-    allowed_tags.extend(f"h{i}" for i in range(1, 7))
+    # Exclude ``h1`` tags from the body to avoid duplicating the page's
+    # main heading in the generated output.
+    allowed_tags.extend(f"h{i}" for i in range(2, 7))
 
     for element in content.find_all(allowed_tags):
         html_parts.append(str(element))
@@ -233,6 +235,9 @@ def main(argv: list[str]) -> int:
     strip_paragraph_classes(content)
 
     output_html = build_html(title, content, gallery_description or None)
+    # Drop the first image placeholder if one exists to mimic Squarespace's
+    # lead image handling.
+    output_html = re.sub(r"\n?<p>\[\[\[ IMAGE \]\]\]</p>\n?", "", output_html, count=1)
 
     output_file = post_dir / f"{post_name}.html"
     output_file.write_text(output_html, encoding="utf-8")
