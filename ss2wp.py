@@ -29,7 +29,7 @@ def parse_post(html: str) -> tuple[str, BeautifulSoup]:
     title = None
     og_title = soup.find("meta", property="og:title")
     if og_title and og_title.get("content"):
-        title = og_title["content"].strip()
+        title = og_title["content"][:-10].strip()
     if not title:
         title_tag = soup.find(re.compile("^h[1-2]$"))
         if title_tag and title_tag.text.strip():
