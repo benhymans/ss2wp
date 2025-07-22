@@ -9,6 +9,7 @@ ss2wp is a Python script that helps migrate blog posts from Squarespace to WordP
 - **Download post images** into a local directory with filenames derived from the post title
 - **Replace images with placeholders** using `<p>[[[ IMAGE ]]]</p>` in the output
 - **Append gallery description** below the post content when available
+- **Remove trailing "Read More" links** from gallery descriptions
 
 ## Usage
 
